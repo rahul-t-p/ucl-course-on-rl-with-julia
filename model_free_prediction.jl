@@ -128,10 +128,13 @@ function PolicyIteration(π)
 	for iteration in 1:1000
 		v_copy = zeros(7)
 		for state in keys(RandomWalkEnv)
-			action = π[state]
-			for transition in 1:length(RandomWalkEnv[state][action])
-				p, next_state, r, done = RandomWalkEnv[state][action][transition]
-				v_copy[state] += r + γ*p*v[next_state]
+			actions = keys(π[state])
+			for action in actions
+				p_π_sa = π[state][action]
+				for transition in 1:length(RandomWalkEnv[state][action])
+					p, next_state, r, done = RandomWalkEnv[state][action][transition]
+					v_copy[state] += p_π_sa * (r + γ*p*v[next_state])
+				end
 			end
 		end
 		if v != v_copy
@@ -161,10 +164,12 @@ function EveryVisitMC(π)
 		trajectory = Vector{Tuple}()
 		N = zeros(7)
 		while !done # Run the policy and update trajectory
-			action = π[state]
-			next_state, r, done = step(state, action)
-			append!(trajectory, [(state, r)])
-			state = next_state
+			actions = keys(π[state])
+			for action in actions
+				next_state, r, done = step(state, action)
+				append!(trajectory, [(state, r)])
+				state = next_state
+			end
 		end
 		for (t, (state, r)) in enumerate(trajectory)
 			# Increment N
@@ -184,19 +189,40 @@ function EveryVisitMC(π)
 	return V, PLOT
 end
 
-# ╔═╡ a57af317-89fd-475b-b777-6c7d75b9f4b6
-MOVE_RIGHT_POLICY = Dict(
-	1 => RIGHT,
-	2 => RIGHT,
-	3 => RIGHT,
-	4 => RIGHT,
-	5 => RIGHT,
-	6 => RIGHT,
-	7 => RIGHT,
+# ╔═╡ cdef7404-33c9-42ea-8fc3-e5c277de41b1
+UNIFORM_RANDOM_POLICY = Dict(
+	1 => Dict(
+		RIGHT => 0.5,
+		LEFT => 0.5,
+	),
+	2 => Dict(
+		RIGHT => 0.5,
+		LEFT => 0.5,
+	),
+	3 => Dict(
+		RIGHT => 0.5,
+		LEFT => 0.5,
+	),
+	4 => Dict(
+		RIGHT => 0.5,
+		LEFT => 0.5,
+	),
+	5 => Dict(
+		RIGHT => 0.5,
+		LEFT => 0.5,
+	),
+	6 => Dict(
+		RIGHT => 0.5,
+		LEFT => 0.5,
+	),
+	7 => Dict(
+		RIGHT => 0.5,
+		LEFT => 0.5,
+	),
 )
 
 # ╔═╡ b186f04e-c539-48d9-b617-7ca4761317e9
-V_PI = PolicyIteration(MOVE_RIGHT_POLICY)
+V_PI = PolicyIteration(UNIFORM_RANDOM_POLICY)
 
 # ╔═╡ 92d3facd-2b74-4708-aa6d-ca1da5addc1a
 md"""
@@ -214,10 +240,12 @@ function EveryVisitMC(π, α)
 		done = false
 		trajectory = Vector{Tuple}()
 		while !done # Run the policy and update trajectory
-			action = π[state]
-			next_state, r, done = step(state, action)
-			append!(trajectory, [(state, r)])
-			state = next_state
+			actions = keys(π[state])
+			for action in actions
+				next_state, r, done = step(state, action)
+				append!(trajectory, [(state, r)])
+				state = next_state
+			end
 		end
 		for (t, (state, r)) in enumerate(trajectory)
 			# Calculate return starting from that state
@@ -236,7 +264,7 @@ function EveryVisitMC(π, α)
 end
 
 # ╔═╡ 48cf609e-19ee-4d20-93e8-8e6a177c0af6
-V_MC, PLOT = EveryVisitMC(MOVE_RIGHT_POLICY)
+V_MC, PLOT = EveryVisitMC(UNIFORM_RANDOM_POLICY)
 
 # ╔═╡ 6963e89c-c153-4c1f-9eaa-b38f87a2a8fa
 append!(PLOT, [V_PI])
@@ -249,7 +277,7 @@ plot(PLOT,
 )
 
 # ╔═╡ 1051f88b-4dde-42d2-be35-3537ca109113
-V_MC_α, PLOT_α = EveryVisitMC(MOVE_RIGHT_POLICY, 0.1)
+V_MC_α, PLOT_α = EveryVisitMC(UNIFORM_RANDOM_POLICY, 0.1)
 
 # ╔═╡ 2f99c16b-b88a-49e1-8e1c-52fbdc76641d
 append!(PLOT_α, [V_PI])
@@ -276,10 +304,13 @@ function TD_0(π, α)
 		state = 4 # Starting state
 		done = false
 		while !done # Run the policy and update trajectory
-			action = π[state]
-			next_state, r, done = step(state, action)
-			V[state] += α * ((r+γ*V[next_state] - V[state]))
-			state = next_state
+			actions = keys(π[state])
+			for action in actions
+				p_π_sa = π[state][action]
+				next_state, r, done = step(state, action)
+				V[state] += p_π_sa *α * ((r+γ*V[next_state] - V[state]))
+				state = next_state
+			end
 		end
 		# For ploting value function
 		if episode in [10, 100, 500, 1000]
@@ -290,7 +321,7 @@ function TD_0(π, α)
 end
 
 # ╔═╡ 5adb4e90-4274-4af9-a89b-ad4dd0da5c44
-V_TD_0, PLOT_TD_0 = TD_0(MOVE_RIGHT_POLICY, 0.1)
+V_TD_0, PLOT_TD_0 = TD_0(UNIFORM_RANDOM_POLICY, 0.1)
 
 # ╔═╡ 295c30e1-951c-4c82-94c2-ca5f363ad247
 append!(PLOT_TD_0, [V_PI])
@@ -301,6 +332,11 @@ plot(PLOT_TD_0,
 	ylabel="Estimated Value",
 	label = ["10" "100" "500" "1000" "True Values"]
 )
+
+# ╔═╡ f8b948e0-7288-4154-a1e7-cea3f340b492
+md"""
+## TD(λ)
+"""
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1272,7 +1308,7 @@ version = "1.4.1+0"
 # ╠═2b3b88e3-bd6a-4758-82d0-51f7953e4e83
 # ╟─e4264469-a104-4992-b041-a2d54219c0cf
 # ╠═94bebe8b-c334-4949-94f0-e752711d56c8
-# ╟─a57af317-89fd-475b-b777-6c7d75b9f4b6
+# ╟─cdef7404-33c9-42ea-8fc3-e5c277de41b1
 # ╠═48cf609e-19ee-4d20-93e8-8e6a177c0af6
 # ╠═b186f04e-c539-48d9-b617-7ca4761317e9
 # ╠═6963e89c-c153-4c1f-9eaa-b38f87a2a8fa
@@ -1288,5 +1324,6 @@ version = "1.4.1+0"
 # ╠═5adb4e90-4274-4af9-a89b-ad4dd0da5c44
 # ╠═295c30e1-951c-4c82-94c2-ca5f363ad247
 # ╠═8341c308-3f7c-4bca-aad4-60f174f45e70
+# ╟─f8b948e0-7288-4154-a1e7-cea3f340b492
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
