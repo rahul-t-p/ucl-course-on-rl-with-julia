@@ -6,3 +6,4 @@ Implementation of examples from [UCL Course on RL](https://www.davidsilver.uk/te
 
 1. Lecture 2: [Markov Decision Processes](markov_decision_processes.jl)
 2. Lecture 3: [Planning by Dynamic Programming](planning_by_dynamic_programming.jl)
+3. Lecture 4: [Model-Free Prediction](model_free_prediction.jl)
