@@ -10,6 +10,9 @@ begin
 	using Plots
 end
 
+# ╔═╡ 4f7069a9-76b2-4853-a72f-48a494f46782
+using Distributions
+
 # ╔═╡ ab2b6d08-551f-11ed-044d-e9cf7bea3f57
 md"""
 # Planning by Dyanamic Programming
@@ -269,11 +272,21 @@ ENV1 = sort(Dict(
 	),
 ))
 
+# ╔═╡ 75dfbb27-128f-4d04-8189-1a85308d25a3
+UR_POLICY_ENV1 = sort(Dict(
+	i => Dict(
+		UP => 0.25,
+		DOWN => 0.25,
+		LEFT => 0.25,
+		RIGHT => 0.25,
+	) for i in 0:15
+))
+
 # ╔═╡ d1b79a4a-15db-475f-9836-74424fde70de
-begin # Policy Evaluation
-	v_env1 = zeros(4, 4)
+function policy_evaluation(ENV, π)
+	v = zeros(4, 4)
 	println("Initial value function :\n")
-	show(stdout, "text/plain", v_env1)
+	show(stdout, "text/plain", v)
 	println()
 	println()
 	
@@ -281,24 +294,27 @@ begin # Policy Evaluation
 		
 		v_copy = zeros(4, 4)
 		
-		for state in eachindex(v_env1)
-			for action in instances(ACTIONS)
-				p, next_state, r, done = ENV1[state-1][action][1]
-				v_copy[state] += 0.25(r + γ*p*v_env1[next_state+1]) # 0.25 probability since its a uniform random policy with 4 actions
+		for state in eachindex(v)
+			actions = keys(π[state-1])
+			for action in actions
+				p_π_sa = π[state-1][action]
+				p, next_state, r, done = ENV[state-1][action][1]
+				v_copy[state] += p_π_sa * (r + γ*p*v[next_state+1])
 			end
 		end
 		
-		if ((v_env1 - v_copy) .< 0.01) == ones(size(v_env1)) # Break if the update is less than 0.01
+		if ((v - v_copy) .< 0.01) == ones(size(v)) # Break if the update is less than 0.01
 			break
 		end
 		
-		global v_env1 = v_copy
+		v = v_copy
 		println("Value function after iteration $(k) :\n")
-		show(stdout, "text/plain", v_env1)
+		show(stdout, "text/plain", v)
 		println()
 		println()
 	end
-	v_env1 = round.(v_env1, digits=4) # Round off value functions to 4 digits for comparison
+	v = round.(v, digits=4) # Round off value functions to 4 digits for comparison
+	return v
 end
 
 # ╔═╡ 15104f09-979c-480c-bea5-eb4f037ed41a
@@ -306,74 +322,30 @@ md"""
 #### Optimal State Value Function
 """
 
-# ╔═╡ cafc7d63-3284-439f-9ce3-b17a830249d0
-heatmap(v_env1, color = :greys, yaxis = :flip, title="Optimal State Value Function")
-
 # ╔═╡ 67251bb9-8577-4eab-8444-a1991f40813c
 md"""
 Policy Improvement is done by acting greedy.
 """
-
-# ╔═╡ 9e95a17d-7b46-4d38-bff7-cca141d969f4
-begin # Policy Improvement
-	ENV1_OPTIM_POLICY = sort(Dict())
-	for state in collect(keys(ENV1))
-		opt_action_val = -Inf
-		opt_action = Vector{ACTIONS}()
-		for action in instances(ACTIONS)
-			p, next_state, r, done = ENV1[state][action][1]
-			if v_env1[next_state+1] > opt_action_val
-				opt_action_val = v_env1[next_state+1]
-				opt_action = Vector{ACTIONS}([action])
-			elseif v_env1[next_state+1] == opt_action_val
-				append!(opt_action, [action])
-			end
-		end
-		ENV1_OPTIM_POLICY[state] = opt_action
-	end
-end
 
 # ╔═╡ a775cf9b-4855-42c0-b265-81274627a0b6
 md"""
 #### Optimal Policy
 """
 
-# ╔═╡ 4dcb651b-fe66-4c32-9ca4-5c2f8e179287
-ENV1_OPTIM_POLICY
-
 # ╔═╡ b06e3eb4-4aa6-449c-9b38-4183402364e3
 md"""
 ## Policy Iteration
 """
 
-# ╔═╡ e3ccb5cb-1330-4b3c-9b82-24a47bd0f3f6
-UNIFORM_RANDOM_POLICY = sort(Dict(
-	0 => [UP, DOWN, LEFT, RIGHT],
-	1 => [UP, DOWN, LEFT, RIGHT],
-	2 => [UP, DOWN, LEFT, RIGHT],
-	3 => [UP, DOWN, LEFT, RIGHT],
-	4 => [UP, DOWN, LEFT, RIGHT],
-	5 => [UP, DOWN, LEFT, RIGHT],
-	6 => [UP, DOWN, LEFT, RIGHT],
-	7 => [UP, DOWN, LEFT, RIGHT],
-	8 => [UP, DOWN, LEFT, RIGHT],
-	9 => [UP, DOWN, LEFT, RIGHT],
-	10 => [UP, DOWN, LEFT, RIGHT],
-	11 => [UP, DOWN, LEFT, RIGHT],
-	12 => [UP, DOWN, LEFT, RIGHT],
-	13 => [UP, DOWN, LEFT, RIGHT],
-	14 => [UP, DOWN, LEFT, RIGHT],
-	15 => [UP, DOWN, LEFT, RIGHT],
-))
-
 # ╔═╡ 528e1c16-7352-47a9-8843-33d61ed40d54
 function policy_evaluation(ENV, π, v)
 	v_copy = zeros(size(v))
 	for state in eachindex(v)
-		for action in π[state-1]
-			action_probabiliy = 1 / (length(π[state-1])) # Assume each action is equiprobable.
+		actions = keys(π[state-1])
+		for action in actions
+			p_π_sa = π[state-1][action]
 			p, next_state, r, done = ENV[state-1][action][1]
-			v_copy[state] += action_probabiliy * (r + γ*p*v[next_state+1])
+			v_copy[state] += p_π_sa * (r + γ*p*v[next_state+1])
 		end
 	end
 	return round.(v_copy, digits=4)
@@ -394,7 +366,136 @@ function policy_improvement(ENV, v)
 				append!(opt_action, [action])
 			end
 		end
-		GREEDY_POLICY[state-1] = opt_action
+		GREEDY_POLICY[state-1] = Dict(action => (1/length(opt_action)) for action in opt_action)
+	end
+	return GREEDY_POLICY
+end
+
+# ╔═╡ 122c6b0d-e9b9-4e3c-a599-66004982831b
+md"""
+#### Optimal State Value Function
+"""
+
+# ╔═╡ 988b7db9-eec9-40b4-a04d-7e3e284f3ac4
+md"""
+#### Optimal Policy
+"""
+
+# ╔═╡ ac0b1c18-1e24-4cd0-b49f-d593e48c5e14
+md"""
+## Car Rental
+"""
+
+# ╔═╡ 09afdaaa-43f6-4ebc-85e0-749265a564ab
+PlutoUI.LocalResource("src/l3_3.png")
+
+# ╔═╡ 7283a5ea-9b95-485e-af34-d67a0828f4eb
+Base.@kwdef mutable struct Location
+	req::Int8
+	ret::Int8
+	count::Int8
+	poisson_req = Poisson(req)
+	poisson_ret = Poisson(ret)
+end
+
+# ╔═╡ 9ea06a4e-8c7b-44de-81d1-bddd558fd266
+Base.@kwdef mutable struct CarRental
+	Location_1 = Location(req=3, ret=3, count=15)
+	Location_2 = Location(req=4, ret=2, count=20)
+	MAX_CAR_COUNT = 20
+	TRANSPORTATION_COST = -2
+	RENTAL_CREDIT = 10
+	ACTIONS = -5:5
+end
+
+# ╔═╡ 027e2865-b9c5-4fec-a5cc-1d10661d0631
+function step!(state::CarRental, action)
+	# Initial state
+	state.Location_1.count = max(0, min(state.MAX_CAR_COUNT, state.Location_1.count-action))
+	state.Location_2.count = max(0, min(state.MAX_CAR_COUNT, state.Location_2.count+action))
+	# Initial Reward
+	reward = abs(action) * state.TRANSPORTATION_COST
+	#= Requests and Returns =#
+	req_loc1 = rand(state.Location_1.poisson_req, 1)
+	req_loc2 = rand(state.Location_2.poisson_req, 1)
+	ret_loc1 = rand(state.Location_1.poisson_ret, 1)
+	ret_loc2 = rand(state.Location_2.poisson_ret, 1)
+
+	req_probability = pdf(state.Location_1.poisson_req, req_loc1) * pdf(state.Location_2.poisson_req, req_loc2)
+	ret_probability = pdf(state.Location_1.poisson_ret, ret_loc1) * pdf(state.Location_2.poisson_ret, ret_loc2)
+	total_probability = req_probability * ret_probability
+	
+	valid_req_loc1 = min(state.Location_1.count, req_loc1[1])
+	valid_req_loc2 = min(state.Location_2.count, req_loc2[1])
+	# Final Reward
+	reward += (valid_req_loc1 + valid_req_loc2) * state.RENTAL_CREDIT
+	# Final State
+	state.Location_1.count = min(state.MAX_CAR_COUNT, state.Location_1.count-valid_req_loc1+ret_loc1[1])
+	state.Location_2.count = min(state.MAX_CAR_COUNT, state.Location_2.count-valid_req_loc2+ret_loc2[1])
+
+	return total_probability, state, reward
+end
+
+# ╔═╡ babe71f4-4804-4d29-932d-69342f81cf9c
+JacksCarRental = CarRental()
+
+# ╔═╡ ca82b60f-759e-4177-ae89-42cc6ac53edf
+function policy_evaluation(env::CarRental, π, v)
+	v_copy = zeros(size(v))
+	for s_loc1 in 1:size(v, 1)
+		for s_loc2 in 1:size(v, 2)
+			action = π[s_loc1, s_loc2]
+			p, next_state, r = step!(env, action)
+			v_copy[s_loc1, s_loc2] += 1 * (r + γ*p*v[next_state.Location_1.count+1, next_state.Location_2.count+1]) # Action is deterministic
+		end
+	end
+	return round.(v_copy, digits=4)
+end
+
+# ╔═╡ b9c728ba-a99d-4298-aba8-d3f4efe917ce
+v_env1 = policy_evaluation(ENV1, UR_POLICY_ENV1)
+
+# ╔═╡ cafc7d63-3284-439f-9ce3-b17a830249d0
+heatmap(v_env1, color = :greys, yaxis = :flip, title="State Value Function")
+
+# ╔═╡ 9e95a17d-7b46-4d38-bff7-cca141d969f4
+begin # Policy Improvement
+	ENV1_OPTIM_POLICY = sort(Dict())
+	for state in collect(keys(ENV1))
+		opt_action_val = -Inf
+		opt_action = Vector{ACTIONS}()
+		for action in instances(ACTIONS)
+			p, next_state, r, done = ENV1[state][action][1]
+			if v_env1[next_state+1] > opt_action_val
+				opt_action_val = v_env1[next_state+1]
+				opt_action = Vector{ACTIONS}([action])
+			elseif v_env1[next_state+1] == opt_action_val
+				append!(opt_action, [action])
+			end
+		end
+		ENV1_OPTIM_POLICY[state] = Dict(action => (1/length(opt_action)) for action in opt_action)
+	end
+end
+
+# ╔═╡ 4dcb651b-fe66-4c32-9ca4-5c2f8e179287
+ENV1_OPTIM_POLICY
+
+# ╔═╡ 870d000b-e3a0-4657-aa21-3757d2fb8205
+function policy_improvement(env::CarRental, v)
+	GREEDY_POLICY = zeros(Int8, size(v))
+	for s_loc1 in 1:size(v, 1)
+		for s_loc2 in 1:size(v, 2)
+			opt_action = -10
+			opt_action_val = -Inf
+			for action in env.ACTIONS
+				next_state, r = step!(env, action)
+				if v[next_state.Location_1.count+1, next_state.Location_2.count+1] > opt_action_val
+					opt_action_val = v[next_state.Location_1.count+1, next_state.Location_2.count+1]
+					opt_action = action
+				end
+			end
+			GREEDY_POLICY[s_loc1, s_loc2] = opt_action
+		end
 	end
 	return GREEDY_POLICY
 end
@@ -402,7 +503,7 @@ end
 # ╔═╡ 92f04d55-b507-4bcb-95db-aa916e437705
 begin # Policy Iteration
 	v = zeros(4, 4)
-	π = UNIFORM_RANDOM_POLICY
+	π = UR_POLICY_ENV1
 	for iteration in 1:100
 		π_old = π
 		v = policy_evaluation(ENV1, π, v)
@@ -413,21 +514,32 @@ begin # Policy Iteration
 	end
 end
 
-# ╔═╡ 122c6b0d-e9b9-4e3c-a599-66004982831b
-md"""
-#### Optimal State Value Function
-"""
-
 # ╔═╡ d7749f67-279b-4584-9124-82944afc4ffd
 heatmap(v, color = :greys, yaxis = :flip, title="Optimal State Value Function")
 
-# ╔═╡ 988b7db9-eec9-40b4-a04d-7e3e284f3ac4
-md"""
-#### Optimal Policy
-"""
-
 # ╔═╡ 9e97d0f0-1602-47ae-9c8d-e26409b37de9
 π
+
+# ╔═╡ 137b0480-78a0-40a3-9421-9b8a5dc35c8e
+begin # Polciy Iteration
+	v_car = zeros(JacksCarRental.MAX_CAR_COUNT+1, JacksCarRental.MAX_CAR_COUNT+1)
+	π_car = zeros(Int8, JacksCarRental.MAX_CAR_COUNT+1, JacksCarRental.MAX_CAR_COUNT+1)
+	for iteration in 1:100
+		π_old = π_car
+		v_car = policy_evaluation(JacksCarRental, π_car, v_car)
+		π_car = policy_improvement(JacksCarRental, v_car)
+		if π_old == π_car
+			println("Policy unchanged after iteration : $iteration")
+			break
+		end
+	end
+end
+
+# ╔═╡ 2fbdc9fb-05e7-48fb-bd09-78880cb0af95
+heatmap(π_car, title="Optimal State Value Function")
+
+# ╔═╡ cbdb47b6-0dd9-4881-9888-838cd4b45a99
+v_car
 
 # ╔═╡ 1de04b04-5805-434c-b314-5e788fde59ba
 md"""
@@ -714,10 +826,12 @@ heatmap(v_env2, color = :greys, yaxis = :flip, title="Optimal Action Value Funct
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 
 [compat]
+Distributions = "~0.25.76"
 Plots = "~1.35.5"
 PlutoUI = "~0.7.48"
 """
@@ -760,6 +874,12 @@ deps = ["Artifacts", "Bzip2_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll",
 git-tree-sha1 = "4b859a208b2397a7a623a03449e4636bdb17bcf2"
 uuid = "83423d85-b0ee-5818-9007-b63ccbeb887a"
 version = "1.16.1+1"
+
+[[deps.Calculus]]
+deps = ["LinearAlgebra"]
+git-tree-sha1 = "f641eb0a4f00c343bbc32346e1217b86f3ce9dad"
+uuid = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
+version = "0.5.1"
 
 [[deps.ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
@@ -837,6 +957,18 @@ uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
 deps = ["Mmap"]
 uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 
+[[deps.DensityInterface]]
+deps = ["InverseFunctions", "Test"]
+git-tree-sha1 = "80c3e8639e3353e5d2912fb3a1916b8455e2494b"
+uuid = "b429d917-457f-4dbc-8f4c-0cc954292b1d"
+version = "0.4.0"
+
+[[deps.Distributions]]
+deps = ["ChainRulesCore", "DensityInterface", "FillArrays", "LinearAlgebra", "PDMats", "Printf", "QuadGK", "Random", "SparseArrays", "SpecialFunctions", "Statistics", "StatsBase", "StatsFuns", "Test"]
+git-tree-sha1 = "04db820ebcfc1e053bd8cbb8d8bccf0ff3ead3f7"
+uuid = "31c24e10-a181-5473-b8eb-7969acd0382f"
+version = "0.25.76"
+
 [[deps.DocStringExtensions]]
 deps = ["LibGit2"]
 git-tree-sha1 = "c36550cb29cbe373e95b3f40486b9a4148f89ffd"
@@ -846,6 +978,12 @@ version = "0.9.2"
 [[deps.Downloads]]
 deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
 uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
+
+[[deps.DualNumbers]]
+deps = ["Calculus", "NaNMath", "SpecialFunctions"]
+git-tree-sha1 = "5837a837389fccf076445fce071c8ddaea35a566"
+uuid = "fa6b7ba4-c1ee-5f82-b5fc-ecf0adba8f74"
+version = "0.6.8"
 
 [[deps.Expat_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -867,6 +1005,12 @@ version = "4.4.2+2"
 
 [[deps.FileWatching]]
 uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
+
+[[deps.FillArrays]]
+deps = ["LinearAlgebra", "Random", "SparseArrays", "Statistics"]
+git-tree-sha1 = "802bfc139833d2ba893dd9e62ba1767c88d708ae"
+uuid = "1a297f60-69ca-5386-bcde-b61e274b549b"
+version = "0.13.5"
 
 [[deps.FixedPointNumbers]]
 deps = ["Statistics"]
@@ -950,6 +1094,12 @@ deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll",
 git-tree-sha1 = "129acf094d168394e80ee1dc4bc06ec835e510a3"
 uuid = "2e76f6c2-a576-52d4-95c1-20adfe4de566"
 version = "2.8.1+1"
+
+[[deps.HypergeometricFunctions]]
+deps = ["DualNumbers", "LinearAlgebra", "OpenLibm_jll", "SpecialFunctions", "Test"]
+git-tree-sha1 = "709d864e3ed6e3545230601f94e11ebc65994641"
+uuid = "34004b35-14d8-5ef3-9330-4cdb6864b03a"
+version = "0.3.11"
 
 [[deps.Hyperscript]]
 deps = ["Test"]
@@ -1226,6 +1376,12 @@ version = "1.4.1"
 deps = ["Artifacts", "Libdl"]
 uuid = "efcefdf7-47ab-520b-bdef-62a2eaa19f15"
 
+[[deps.PDMats]]
+deps = ["LinearAlgebra", "SparseArrays", "SuiteSparse"]
+git-tree-sha1 = "cf494dca75a69712a72b80bc48f59dcf3dea63ec"
+uuid = "90014a1f-27ba-587c-ab20-58faa44d9150"
+version = "0.11.16"
+
 [[deps.Parsers]]
 deps = ["Dates"]
 git-tree-sha1 = "6c01a9b494f6d2a9fc180a08b182fcb06f0958a0"
@@ -1287,6 +1443,12 @@ git-tree-sha1 = "c6c0f690d0cc7caddb74cef7aa847b824a16b256"
 uuid = "ea2cea3b-5b76-57ae-a6ef-0a8af62496e1"
 version = "5.15.3+1"
 
+[[deps.QuadGK]]
+deps = ["DataStructures", "LinearAlgebra"]
+git-tree-sha1 = "97aa253e65b784fd13e83774cadc95b38011d734"
+uuid = "1fd47b50-473d-5c70-9696-f719f8f3bcdc"
+version = "2.6.0"
+
 [[deps.REPL]]
 deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
 uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
@@ -1323,6 +1485,18 @@ deps = ["UUIDs"]
 git-tree-sha1 = "838a3a4188e2ded87a4f9f184b4b0d78a1e91cb7"
 uuid = "ae029012-a4dd-5104-9daa-d747884805df"
 version = "1.3.0"
+
+[[deps.Rmath]]
+deps = ["Random", "Rmath_jll"]
+git-tree-sha1 = "bf3188feca147ce108c76ad82c2792c57abe7b1f"
+uuid = "79098fc4-a85e-5d69-aa6a-4863f24498fa"
+version = "0.7.0"
+
+[[deps.Rmath_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "68db32dff12bb6127bac73c209881191bf0efbb7"
+uuid = "f50d1b31-88e8-58de-be2c-1cc44531875f"
+version = "0.3.0+0"
 
 [[deps.SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
@@ -1386,6 +1560,16 @@ deps = ["DataAPI", "DataStructures", "LinearAlgebra", "LogExpFunctions", "Missin
 git-tree-sha1 = "d1bf48bfcc554a3761a133fe3a9bb01488e06916"
 uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 version = "0.33.21"
+
+[[deps.StatsFuns]]
+deps = ["ChainRulesCore", "HypergeometricFunctions", "InverseFunctions", "IrrationalConstants", "LogExpFunctions", "Reexport", "Rmath", "SpecialFunctions"]
+git-tree-sha1 = "5783b877201a82fc0014cbf381e7e6eb130473a4"
+uuid = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
+version = "1.0.1"
+
+[[deps.SuiteSparse]]
+deps = ["Libdl", "LinearAlgebra", "Serialization", "SparseArrays"]
+uuid = "4607b0f0-06f3-5cda-b6b1-a6196a1729e9"
 
 [[deps.TOML]]
 deps = ["Dates"]
@@ -1675,7 +1859,9 @@ version = "1.4.1+0"
 # ╟─57dae1c6-1d40-4214-88ce-5f15774df877
 # ╠═0b84bddd-46e7-4158-b891-96796efd4441
 # ╟─79cb305f-9749-4888-ba88-9b85a819c274
+# ╟─75dfbb27-128f-4d04-8189-1a85308d25a3
 # ╠═d1b79a4a-15db-475f-9836-74424fde70de
+# ╠═b9c728ba-a99d-4298-aba8-d3f4efe917ce
 # ╟─15104f09-979c-480c-bea5-eb4f037ed41a
 # ╠═cafc7d63-3284-439f-9ce3-b17a830249d0
 # ╟─67251bb9-8577-4eab-8444-a1991f40813c
@@ -1683,7 +1869,6 @@ version = "1.4.1+0"
 # ╟─a775cf9b-4855-42c0-b265-81274627a0b6
 # ╠═4dcb651b-fe66-4c32-9ca4-5c2f8e179287
 # ╟─b06e3eb4-4aa6-449c-9b38-4183402364e3
-# ╟─e3ccb5cb-1330-4b3c-9b82-24a47bd0f3f6
 # ╠═528e1c16-7352-47a9-8843-33d61ed40d54
 # ╠═b5a5e69e-e896-4021-8c24-92589fd767e9
 # ╠═92f04d55-b507-4bcb-95db-aa916e437705
@@ -1691,6 +1876,18 @@ version = "1.4.1+0"
 # ╠═d7749f67-279b-4584-9124-82944afc4ffd
 # ╟─988b7db9-eec9-40b4-a04d-7e3e284f3ac4
 # ╠═9e97d0f0-1602-47ae-9c8d-e26409b37de9
+# ╟─ac0b1c18-1e24-4cd0-b49f-d593e48c5e14
+# ╟─09afdaaa-43f6-4ebc-85e0-749265a564ab
+# ╠═4f7069a9-76b2-4853-a72f-48a494f46782
+# ╠═7283a5ea-9b95-485e-af34-d67a0828f4eb
+# ╠═9ea06a4e-8c7b-44de-81d1-bddd558fd266
+# ╠═027e2865-b9c5-4fec-a5cc-1d10661d0631
+# ╠═babe71f4-4804-4d29-932d-69342f81cf9c
+# ╠═ca82b60f-759e-4177-ae89-42cc6ac53edf
+# ╠═870d000b-e3a0-4657-aa21-3757d2fb8205
+# ╠═137b0480-78a0-40a3-9421-9b8a5dc35c8e
+# ╠═2fbdc9fb-05e7-48fb-bd09-78880cb0af95
+# ╠═cbdb47b6-0dd9-4881-9888-838cd4b45a99
 # ╟─1de04b04-5805-434c-b314-5e788fde59ba
 # ╟─b661c2a1-a124-43c0-9db6-7ae9548ac460
 # ╟─01f9c6f9-31fd-42fc-bd95-d6e891344e77

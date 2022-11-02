@@ -190,36 +190,12 @@ function EveryVisitMC(π)
 end
 
 # ╔═╡ cdef7404-33c9-42ea-8fc3-e5c277de41b1
-UNIFORM_RANDOM_POLICY = Dict(
-	1 => Dict(
+UNIFORM_RANDOM_POLICY = sort(Dict(
+	i => Dict(
 		RIGHT => 0.5,
 		LEFT => 0.5,
-	),
-	2 => Dict(
-		RIGHT => 0.5,
-		LEFT => 0.5,
-	),
-	3 => Dict(
-		RIGHT => 0.5,
-		LEFT => 0.5,
-	),
-	4 => Dict(
-		RIGHT => 0.5,
-		LEFT => 0.5,
-	),
-	5 => Dict(
-		RIGHT => 0.5,
-		LEFT => 0.5,
-	),
-	6 => Dict(
-		RIGHT => 0.5,
-		LEFT => 0.5,
-	),
-	7 => Dict(
-		RIGHT => 0.5,
-		LEFT => 0.5,
-	),
-)
+	) for i in 1:7
+))
 
 # ╔═╡ b186f04e-c539-48d9-b617-7ca4761317e9
 V_PI = PolicyIteration(UNIFORM_RANDOM_POLICY)
@@ -1308,7 +1284,7 @@ version = "1.4.1+0"
 # ╠═2b3b88e3-bd6a-4758-82d0-51f7953e4e83
 # ╟─e4264469-a104-4992-b041-a2d54219c0cf
 # ╠═94bebe8b-c334-4949-94f0-e752711d56c8
-# ╟─cdef7404-33c9-42ea-8fc3-e5c277de41b1
+# ╠═cdef7404-33c9-42ea-8fc3-e5c277de41b1
 # ╠═48cf609e-19ee-4d20-93e8-8e6a177c0af6
 # ╠═b186f04e-c539-48d9-b617-7ca4761317e9
 # ╠═6963e89c-c153-4c1f-9eaa-b38f87a2a8fa
