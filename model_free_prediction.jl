@@ -225,7 +225,7 @@ function EveryVisitMC(π, α)
 			rewards = map(x->x[2], trajectory[t:end])
 			G = sum(discounts .* rewards)
 			# Update value fuction incrementaly
-			V[state] += (1/α) * (G - V[state])
+			V[state] += α * (G - V[state])
 		end
 		# For ploting value function
 		if episode in [10, 100, 500, 1000]
@@ -249,7 +249,7 @@ plot(PLOT,
 )
 
 # ╔═╡ 1051f88b-4dde-42d2-be35-3537ca109113
-V_MC_α, PLOT_α = EveryVisitMC(MOVE_RIGHT_POLICY, 10)
+V_MC_α, PLOT_α = EveryVisitMC(MOVE_RIGHT_POLICY, 0.1)
 
 # ╔═╡ 2f99c16b-b88a-49e1-8e1c-52fbdc76641d
 append!(PLOT_α, [V_PI])
@@ -265,6 +265,42 @@ plot(PLOT_α,
 md"""
 ### Temporal-Difference Learning
 """
+
+# ╔═╡ 3fce5d20-88f6-42c9-a6c1-3c9f6cf22716
+# TD(0)
+function TD_0(π, α)
+	γ = 0.9
+	V = zeros(7)
+	PLOT = Vector{Vector{Float64}}()
+	for episode in 1:1000
+		state = 4 # Starting state
+		done = false
+		while !done # Run the policy and update trajectory
+			action = π[state]
+			next_state, r, done = step(state, action)
+			V[state] += α * ((r+γ*V[next_state] - V[state]))
+			state = next_state
+		end
+		# For ploting value function
+		if episode in [10, 100, 500, 1000]
+			append!(PLOT, [copy(V)])
+		end
+	end
+	return V, PLOT
+end
+
+# ╔═╡ 5adb4e90-4274-4af9-a89b-ad4dd0da5c44
+V_TD_0, PLOT_TD_0 = TD_0(MOVE_RIGHT_POLICY, 0.1)
+
+# ╔═╡ 295c30e1-951c-4c82-94c2-ca5f363ad247
+append!(PLOT_TD_0, [V_PI])
+
+# ╔═╡ 8341c308-3f7c-4bca-aad4-60f174f45e70
+plot(PLOT_TD_0,
+	xlabel="STATE",
+	ylabel="Estimated Value",
+	label = ["10" "100" "500" "1000" "True Values"]
+)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1248,5 +1284,9 @@ version = "1.4.1+0"
 # ╠═2f99c16b-b88a-49e1-8e1c-52fbdc76641d
 # ╠═685f4283-559f-433c-be78-60a928c2547d
 # ╟─faa011cd-c2f5-45ac-8c31-0b3e51a58c75
+# ╠═3fce5d20-88f6-42c9-a6c1-3c9f6cf22716
+# ╠═5adb4e90-4274-4af9-a89b-ad4dd0da5c44
+# ╠═295c30e1-951c-4c82-94c2-ca5f363ad247
+# ╠═8341c308-3f7c-4bca-aad4-60f174f45e70
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
