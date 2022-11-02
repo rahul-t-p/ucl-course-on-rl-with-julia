@@ -125,7 +125,7 @@ md"""
 function PolicyIteration(π)
 	γ = 0.9
 	v = zeros(7)
-	for iteration in 1:1000
+	for iteration in 1:200
 		v_copy = zeros(7)
 		for state in keys(RandomWalkEnv)
 			actions = keys(π[state])
@@ -249,7 +249,8 @@ append!(PLOT, [V_PI])
 plot(PLOT,
 	xlabel="STATE",
 	ylabel="Estimated Value",
-	label = ["10" "100" "500" "1000" "True Values"]
+	label = ["10" "100" "500" "1000" "True Values"],
+	title = "MC"
 )
 
 # ╔═╡ 1051f88b-4dde-42d2-be35-3537ca109113
@@ -262,7 +263,8 @@ append!(PLOT_α, [V_PI])
 plot(PLOT_α,
 	xlabel="STATE",
 	ylabel="Estimated Value",
-	label = ["10" "100" "500" "1000" "True Values"]
+	label = ["10" "100" "500" "1000" "True Values"],
+	title = "MC with α"
 )
 
 # ╔═╡ faa011cd-c2f5-45ac-8c31-0b3e51a58c75
@@ -306,13 +308,67 @@ append!(PLOT_TD_0, [V_PI])
 plot(PLOT_TD_0,
 	xlabel="STATE",
 	ylabel="Estimated Value",
-	label = ["10" "100" "500" "1000" "True Values"]
+	label = ["10" "100" "500" "1000" "True Values"],
+	title = "TD(0)"
 )
 
 # ╔═╡ f8b948e0-7288-4154-a1e7-cea3f340b492
 md"""
 ## TD(λ)
 """
+
+# ╔═╡ be8c5bf0-fe69-4876-ae44-b3aad2e4b103
+# TD(λ)
+function TD_λ(π, α, n)
+	γ = 0.9
+	V = zeros(7)
+	γ_step = [γ^i for i in 0:n]
+	PLOT = Vector{Vector{Float64}}()
+	for episode in 1:1000
+		state = 4 # Starting state
+		done = false
+		while !done # Run the policy and update trajectory
+			actions = keys(π[state])
+			for action in actions
+				p_π_sa = π[state][action]
+				first_state = nothing
+				last_state = nothing
+				r_step = Vector{Int}()
+				for i in 1:n # n-step logic
+					next_state, r, done = step(state, action)
+					append!(r_step, r)
+					if i == 1 
+						first_state = next_state
+					elseif i == n
+						last_state = next_state
+					end
+				end
+				Gₜⁿ = sum(γ_step[1:end-1] .* r_step) + (γ_step[end] * V[last_state])
+				V[state] += p_π_sa * α * (Gₜⁿ - V[state])
+				state = first_state
+			end
+		end
+		# For ploting value function
+		if episode in [10, 100, 500, 1000]
+			append!(PLOT, [copy(V)])
+		end
+	end
+	return V, PLOT
+end
+
+# ╔═╡ 55f64638-51b4-48d4-aba7-f5c6ba3024cd
+V_TD_λ, PLOT_TD_λ = TD_λ(UNIFORM_RANDOM_POLICY, 0.1, 2)
+
+# ╔═╡ 78ec666b-c996-4469-a6f9-46b9a64df142
+append!(PLOT_TD_λ, [V_PI])
+
+# ╔═╡ 671e0527-d834-4209-a36f-bcd1bf4bfc0a
+plot(PLOT_TD_λ,
+	xlabel="STATE",
+	ylabel="Estimated Value",
+	label = ["10" "100" "500" "1000" "True Values"],
+	title = "TD(λ)"
+)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1284,7 +1340,7 @@ version = "1.4.1+0"
 # ╠═2b3b88e3-bd6a-4758-82d0-51f7953e4e83
 # ╟─e4264469-a104-4992-b041-a2d54219c0cf
 # ╠═94bebe8b-c334-4949-94f0-e752711d56c8
-# ╠═cdef7404-33c9-42ea-8fc3-e5c277de41b1
+# ╟─cdef7404-33c9-42ea-8fc3-e5c277de41b1
 # ╠═48cf609e-19ee-4d20-93e8-8e6a177c0af6
 # ╠═b186f04e-c539-48d9-b617-7ca4761317e9
 # ╠═6963e89c-c153-4c1f-9eaa-b38f87a2a8fa
@@ -1301,5 +1357,9 @@ version = "1.4.1+0"
 # ╠═295c30e1-951c-4c82-94c2-ca5f363ad247
 # ╠═8341c308-3f7c-4bca-aad4-60f174f45e70
 # ╟─f8b948e0-7288-4154-a1e7-cea3f340b492
+# ╠═be8c5bf0-fe69-4876-ae44-b3aad2e4b103
+# ╠═55f64638-51b4-48d4-aba7-f5c6ba3024cd
+# ╠═78ec666b-c996-4469-a6f9-46b9a64df142
+# ╠═671e0527-d834-4209-a36f-bcd1bf4bfc0a
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
