@@ -359,10 +359,11 @@ function policy_improvement(ENV, v)
 		opt_action_val = -Inf
 		for action in instances(ACTIONS)
 			p, next_state, r, done = ENV[state-1][action][1]
-			if v[next_state+1] > opt_action_val
-				opt_action_val = v[next_state+1]
+			action_val = p * (r+γ*v[next_state+1])
+			if action_val > opt_action_val
+				opt_action_val = action_val
 				opt_action = Vector{ACTIONS}([action])
-			elseif v[next_state+1] == opt_action_val
+			elseif action_val == opt_action_val
 				append!(opt_action, [action])
 			end
 		end
@@ -466,10 +467,11 @@ begin # Policy Improvement
 		opt_action = Vector{ACTIONS}()
 		for action in instances(ACTIONS)
 			p, next_state, r, done = ENV1[state][action][1]
-			if v_env1[next_state+1] > opt_action_val
-				opt_action_val = v_env1[next_state+1]
+			action_val = p * (r+γ*v_env1[next_state+1])
+			if action_val > opt_action_val
+				opt_action_val = action_val
 				opt_action = Vector{ACTIONS}([action])
-			elseif v_env1[next_state+1] == opt_action_val
+			elseif action_val == opt_action_val
 				append!(opt_action, [action])
 			end
 		end
